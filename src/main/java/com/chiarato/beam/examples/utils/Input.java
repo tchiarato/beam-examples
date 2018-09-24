@@ -51,8 +51,11 @@ public class Input {
       if (this.runner.equals("DirectRunner")) {
         TestStream<String> mock = TestStream.create(StringUtf8Coder.of())
           .addElements(
-            "{ event_timestamp: '2018-09-20T23:10:39Z' }",
-            "{ event_timestamp: '2018-09-20T23:10:39Z' }")
+            "{ event_timestamp: '2018-09-20T23:10:39Z', event_type: 'CONVERSION' }",
+            "{ event_timestamp: '2018-09-20T23:10:39Z', event_type: 'EMAIL_RECEIVED' }",
+            "{ event_timestamp: '2018-09-20T23:14:39Z', event_type: 'EMAIL_RECEIVED' }",
+            "{ event_timestamp: '2018-09-20T23:16:39Z', event_type: 'EMAIL_RECEIVED' }",
+            "{ event_timestamp: '2018-09-20T23:14:39Z', event_type: 'CONVERSION' }")
           .advanceWatermarkTo(Instant.now())
           .advanceWatermarkToInfinity();
 
