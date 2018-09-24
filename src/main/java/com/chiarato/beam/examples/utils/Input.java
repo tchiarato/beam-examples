@@ -48,7 +48,7 @@ public class Input {
     public PCollection<String> expand(PBegin input) {
       PCollection<String> events;
 
-      if (this.runner == "DirectRunner") {
+      if (this.runner.equals("DirectRunner")) {
         TestStream<String> mock = TestStream.create(StringUtf8Coder.of())
           .addElements(
             "{ event_timestamp: '2018-09-20T23:10:39Z' }",
