@@ -1,18 +1,18 @@
 package com.chiarato.beam.examples;
 
 import com.chiarato.beam.examples.utils.ExerciseOptions;
+import com.chiarato.beam.examples.utils.Input;
 
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
+import org.json.JSONObject;
 
 /**
  * Example 01 - Reads events from a Pubsub topic and writes to a specific directory.
@@ -30,23 +30,21 @@ public class Example02 {
 
     Pipeline pipeline = Pipeline.create(options);
 
-    TestStream<String> events = TestStream.create(StringUtf8Coder.of())
-      .addElements("1.foo", "2.bar")
-      .advanceWatermarkTo(Instant.now())
-      .advanceWatermarkToInfinity();
-
-    // pipeline
-    //   .apply("Read Messages from Pubsub",
-    //     PubsubIO
-    //       .readStrings()
-    //       .fromTopic(options.getTopicName()))
+    String runner = options.getRunner().getSimpleName();
+    String topic = options.getTopicName();
 
     pipeline
-      .apply(events)
-      .apply("Set event timestamp", ParDo.of(new DoFn<String, String>() {
+      .apply(new Input.UnboundedData(runner, topic))
+      .apply("Extract timestamp from event", ParDo.of(new DoFn<String, String>() {
+
         @ProcessElement
         public void processElement(ProcessContext context) {
-          context.outputWithTimestamp(context.element(), Instant.now());
+          String message = context.element();
+
+          JSONObject json = new JSONObject(message);
+          Instant timestamp = Instant.parse(json.getString("event_timestamp"));
+
+          context.outputWithTimestamp(message, timestamp);
         }
       }))
 
