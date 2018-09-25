@@ -7,6 +7,8 @@ import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.TimestampedValue;
+import org.joda.time.Duration;
 import org.joda.time.Instant;
 
 /**
@@ -36,6 +38,7 @@ public class Input {
    */
   public static class UnboundedData extends PTransform<PBegin, PCollection<String>> {
 
+    private Instant baseTime = new Instant(0);
     private String runner;
     private String topicName;
 
@@ -49,17 +52,7 @@ public class Input {
       PCollection<String> events;
 
       if (this.runner.equals("DirectRunner")) {
-        TestStream<String> mock = TestStream.create(StringUtf8Coder.of())
-          .addElements(
-            "{ event_timestamp: '2018-09-20T23:10:39Z', event_type: 'CONVERSION' }",
-            "{ event_timestamp: '2018-09-20T23:10:39Z', event_type: 'EMAIL_RECEIVED' }",
-            "{ event_timestamp: '2018-09-20T23:14:39Z', event_type: 'EMAIL_RECEIVED' }",
-            "{ event_timestamp: '2018-09-20T23:16:39Z', event_type: 'EMAIL_RECEIVED' }",
-            "{ event_timestamp: '2018-09-20T23:14:39Z', event_type: 'CONVERSION' }")
-          .advanceWatermarkTo(Instant.now())
-          .advanceWatermarkToInfinity();
-
-        events = input.apply("Mock Data from TestStream", mock);
+        events = input.apply("Mock Data from TestStream", mockEvents());
       } else {
         events = input.apply("Read Messages from Pubsub",
           PubsubIO
@@ -68,6 +61,30 @@ public class Input {
       }
 
       return events;
+    }
+
+    private TestStream<String> mockEvents() {
+      return TestStream.create(StringUtf8Coder.of())
+        .advanceWatermarkTo(baseTime)
+        .addElements(
+          event("CONVERSION", Duration.ZERO),
+          event("CONVERSION", Duration.ZERO),
+          event("EMAIL_RECEIVED", Duration.standardMinutes(5)))
+        .advanceWatermarkTo(baseTime.plus(Duration.standardMinutes(5)))
+        .addElements(
+          event("CONVERSION", Duration.standardMinutes(5)),
+          event("EMAIL_RECEIVED", Duration.standardMinutes(8)))
+        .advanceWatermarkTo(baseTime.plus(Duration.standardMinutes(10)))
+        .addElements(
+          event("CONVERSION", Duration.standardSeconds(1)),
+          event("EMAIL_RECEIVED", Duration.standardMinutes(13)))
+        .advanceWatermarkToInfinity();
+    }
+
+    private TimestampedValue<String> event(String eventType, Duration baseTimeOffset) {
+      return TimestampedValue.of(
+        "{ 'event_type': '" + eventType + "', 'event_timestamp': '" + baseTime.plus(baseTimeOffset).toDateTime().toString() + "' }",
+        baseTime.plus(baseTimeOffset));
     }
   }
 }

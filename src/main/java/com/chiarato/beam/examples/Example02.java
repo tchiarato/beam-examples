@@ -59,8 +59,8 @@ public class Example02 {
 
     @Override
     public PCollection<String> expand(PCollection<String> input) {
-      return input.
-        apply("Extract timestamp from event", ParDo.of(new DoFn<String, String>() {
+      return input
+        .apply("Extract timestamp from event", ParDo.of(new DoFn<String, String>() {
 
           @ProcessElement
           public void processElement(ProcessContext context) {
@@ -72,11 +72,8 @@ public class Example02 {
             context.outputWithTimestamp(message, timestamp);
           }
         }))
-
-        .apply("Windowing", Window.into(FixedWindows.of(Duration.standardMinutes(5))))
-
+        .apply("Windowing", Window.into(FixedWindows.of(Duration.standardMinutes(10))))
         .apply("Extract and Sum Event Types", new ExtractAndSumEventTypes())
-
         .apply("Format as Text", MapElements.via(new FormatAsTextFn()));
     }
   }
