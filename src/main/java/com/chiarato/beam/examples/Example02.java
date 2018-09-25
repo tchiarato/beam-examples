@@ -7,8 +7,10 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.transforms.Sum;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
@@ -75,15 +77,7 @@ public class Example02 {
 
         .apply("Extract and Sum Event Types", new ExtractAndSumEventTypes())
 
-        .apply("Format", ParDo.of(new DoFn<KV<String, Integer>, String>() {
-
-          @ProcessElement
-          public void processElement(ProcessContext context) {
-            KV<String, Integer> element = context.element();
-            String output = element.getKey() + " : " + element.getValue();
-            context.output(output);
-          }
-        }));
+        .apply("Format as Text", MapElements.via(new FormatAsTextFn()));
     }
   }
 
@@ -109,6 +103,13 @@ public class Example02 {
           }
         }))
         .apply("Sum EventTypes", Sum.<String>integersPerKey());
+    }
+  }
+
+  public static class FormatAsTextFn extends SimpleFunction<KV<String, Integer>, String> {
+    @Override
+    public String apply(KV<String, Integer> input) {
+      return input.getKey() + ": " + input.getValue();
     }
   }
 }

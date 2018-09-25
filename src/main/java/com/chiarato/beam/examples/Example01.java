@@ -19,8 +19,7 @@ import org.joda.time.Duration;
 public class Example01 {
   private static String INPUT = "input/sample.txt";
 
-  public static void main(String[] args) {
-    ExerciseOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(ExerciseOptions.class);
+  static void runExample01(ExerciseOptions options) {
     Pipeline pipeline = Pipeline.create(options);
 
     pipeline
@@ -36,5 +35,12 @@ public class Example01 {
           .to(options.getOutputPrefix()));
 
     pipeline.run();
+  }
+
+  public static void main(String[] args) {
+    ExerciseOptions options =
+      PipelineOptionsFactory.fromArgs(args).withValidation().as(ExerciseOptions.class);
+
+    runExample01(options);
   }
 }

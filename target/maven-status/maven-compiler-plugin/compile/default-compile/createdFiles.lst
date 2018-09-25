@@ -1,0 +1,11 @@
+com/chiarato/beam/examples/utils/Input$BoundedData.class
+com/chiarato/beam/examples/utils/Input$UnboundedData.class
+com/chiarato/beam/examples/Example02$WindowedEventTypes.class
+com/chiarato/beam/examples/Example02$ExtractAndSumEventTypes$1.class
+com/chiarato/beam/examples/Example02.class
+com/chiarato/beam/examples/Example02$WindowedEventTypes$1.class
+com/chiarato/beam/examples/utils/ExerciseOptions.class
+com/chiarato/beam/examples/Example02$FormatAsTextFn.class
+com/chiarato/beam/examples/Example01.class
+com/chiarato/beam/examples/utils/Input.class
+com/chiarato/beam/examples/Example02$ExtractAndSumEventTypes.class
