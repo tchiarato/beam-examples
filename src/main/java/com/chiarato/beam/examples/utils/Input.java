@@ -81,7 +81,7 @@ public class Input {
           event("TYPE-03", Duration.standardMinutes(9)))
         .advanceProcessingTime(TEN_MINUTES.plus(FIVE_MINUTES))
         .addElements(
-          event("TYPE-04", Duration.standardMinutes(10)))
+          event("TYPE-04", Duration.standardMinutes(9)))
         .advanceWatermarkToInfinity();
     }
 
