@@ -12,8 +12,11 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.transforms.Sum;
+import org.apache.beam.sdk.transforms.windowing.AfterProcessingTime;
+import org.apache.beam.sdk.transforms.windowing.AfterWatermark;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
+import org.apache.beam.sdk.transforms.windowing.Window.ClosingBehavior;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.Duration;
@@ -31,6 +34,9 @@ import org.json.JSONObject;
  *      --topicName=projects/project-name/topics/topic-name"
  */
 public class Example02 {
+  private static final Duration FIVE_MINUTES = Duration.standardMinutes(5);
+  private static final Duration TEN_MINUTES = Duration.standardMinutes(10);
+
   public static void main(String[] args) {
     ExerciseOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(ExerciseOptions.class);
 
@@ -72,7 +78,18 @@ public class Example02 {
             context.outputWithTimestamp(message, timestamp);
           }
         }))
-        .apply("Windowing", Window.into(FixedWindows.of(Duration.standardMinutes(10))))
+        .apply("Windowing", 
+          Window
+            .<String>into(FixedWindows.of(TEN_MINUTES))
+            .triggering(
+              AfterWatermark.pastEndOfWindow()
+                .withEarlyFirings(
+                  AfterProcessingTime.pastFirstElementInPane()
+                    .plusDelayOf(FIVE_MINUTES))
+                .withLateFirings(
+                  AfterProcessingTime.pastFirstElementInPane()
+                    .plusDelayOf(FIVE_MINUTES)))
+            .withAllowedLateness(FIVE_MINUTES))
         .apply("Extract and Sum Event Types", new ExtractAndSumEventTypes())
         .apply("Format as Text", MapElements.via(new FormatAsTextFn()));
     }

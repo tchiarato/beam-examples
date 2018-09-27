@@ -16,6 +16,9 @@ import org.joda.time.Instant;
  */
 public class Input {
 
+  private static final Duration FIVE_MINUTES = Duration.standardMinutes(5);
+  private static final Duration TEN_MINUTES = Duration.standardMinutes(10);
+
   public static class BoundedData extends PTransform<PBegin, PCollection<String>> {
 
     private String fileName;
@@ -67,22 +70,23 @@ public class Input {
       return TestStream.create(StringUtf8Coder.of())
         .advanceWatermarkTo(baseTime)
         .addElements(
-          event("CONVERSION", Duration.ZERO),
-          event("CONVERSION", Duration.ZERO),
-          event("EMAIL_RECEIVED", Duration.standardMinutes(5)))
-        .advanceWatermarkTo(baseTime.plus(Duration.standardMinutes(5)))
+          event("TYPE-01", Duration.ZERO),
+          event("TYPE-02", Duration.standardSeconds(30)))
+        .advanceProcessingTime(FIVE_MINUTES)
         .addElements(
-          event("CONVERSION", Duration.standardMinutes(5)),
-          event("EMAIL_RECEIVED", Duration.standardMinutes(8)))
-        .advanceWatermarkTo(baseTime.plus(Duration.standardMinutes(10)))
+          event("TYPE-01", Duration.standardMinutes(1)))
+        .advanceWatermarkTo(baseTime.plus(TEN_MINUTES))
         .addElements(
-          event("CONVERSION", Duration.standardSeconds(1)),
-          event("EMAIL_RECEIVED", Duration.standardMinutes(13)))
+          event("TYPE-01", Duration.standardMinutes(6)),
+          event("TYPE-03", Duration.standardMinutes(9)))
+        .advanceProcessingTime(TEN_MINUTES.plus(FIVE_MINUTES))
+        .addElements(
+          event("TYPE-04", Duration.standardMinutes(10)))
         .advanceWatermarkToInfinity();
     }
 
     private TimestampedValue<String> event(String eventType, Duration baseTimeOffset) {
-      return TimestampedValue.of(
+      return TimestampedValue.of(  
         "{ 'event_type': '" + eventType + "', 'event_timestamp': '" + baseTime.plus(baseTimeOffset).toDateTime().toString() + "' }",
         baseTime.plus(baseTimeOffset));
     }

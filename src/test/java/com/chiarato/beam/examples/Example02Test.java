@@ -1,15 +1,21 @@
 package com.chiarato.beam.examples;
 
-import java.util.Arrays;
-import java.util.List;
+import com.chiarato.beam.examples.utils.Input;
 
 import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
+import org.apache.beam.sdk.testing.TestStream;
 import org.apache.beam.sdk.testing.ValidatesRunner;
-import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.DoFn.ProcessElement;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
+import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.TimestampedValue;
+import org.joda.time.Duration;
+import org.joda.time.Instant;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -22,33 +28,46 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class Example02Test {
 
-  static final String[] EVENTS_ARRAY =
-    new String[] {
-      "{ 'event_type': 'TYPE-01' }",
-      "{ 'event_type': 'TYPE-02' }",
-      "{ 'event_type': 'TYPE-01' }",
-      "{ 'event_type': 'TYPE-01' }",
-      "{ 'event_type': 'TYPE-03' }"
-    };
+  static final Duration FIVE_MINUTES = Duration.standardMinutes(5);
+  static final Duration TEN_MINUTES = Duration.standardMinutes(10);
 
-  static final List<String> EVENTS = Arrays.asList(EVENTS_ARRAY);
   static final String[] COUNTS_ARRAY = new String[] { "TYPE-01: 3", "TYPE-02: 1", "TYPE-03: 1" };
+  static final Duration EVENT_WINDOW_DURATION = Duration.standardMinutes(10);
+  static final Instant baseTime = new Instant(0);
 
   @Rule public final transient TestPipeline pipeline = TestPipeline.create();
 
   @Test
   @Category(ValidatesRunner.class)
   public void testExtractAndSumEventTypes() {
-    PCollection<String> input = 
-      pipeline.apply(Create.of(EVENTS).withCoder(StringUtf8Coder.of()));
-    
-    PCollection<String> output = 
-      input
-        .apply(new Example02.ExtractAndSumEventTypes())
-        .apply(MapElements.via(new Example02.FormatAsTextFn()));
-    
-      PAssert.that(output).containsInAnyOrder(COUNTS_ARRAY);
+    BoundedWindow window = new IntervalWindow(baseTime, EVENT_WINDOW_DURATION);
+
+    PCollection<String> output =
+      pipeline
+        .apply(new Input.UnboundedData("DirectRunner", null))
+        .apply(new Example02.WindowedEventTypes());
+
+      PAssert
+        .that(output)
+        .inOnTimePane(window)
+        .containsInAnyOrder(new String[] { "TYPE-02: 1",  "TYPE-01: 2" });
+      
+      PAssert
+        .that(output)
+        .inWindow(window)
+        .containsInAnyOrder(new String[] { "TYPE-02: 1",  "TYPE-01: 2", "TYPE-01: 1", "TYPE-03: 1" });
+
+      PAssert
+        .that(output)
+        .inFinalPane(window)
+        .containsInAnyOrder(new String[] { "TYPE-04: 1" });
 
       pipeline.run().waitUntilFinish();
+  }
+
+  private TimestampedValue<String> event(String eventType, Duration baseTimeOffset) {
+    return TimestampedValue.of(
+      "{ 'event_type': '" + eventType + "', 'event_timestamp': '" + baseTime.plus(baseTimeOffset).toDateTime().toString() + "' }",
+      baseTime.plus(baseTimeOffset));
   }
 }
