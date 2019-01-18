@@ -1,0 +1,15 @@
+{
+  "type" : "record",
+  "name" : "AbstractEvent",
+  "namespace" : "com.chiarato.beam.examples.Example04",
+  "fields" : [ {
+    "name" : "event_type",
+    "type" : "string"
+  }, {
+    "name" : "event_timestamp",
+    "type" : "string"
+  }, {
+    "name" : "payload",
+    "type" : "string"
+  } ]
+}

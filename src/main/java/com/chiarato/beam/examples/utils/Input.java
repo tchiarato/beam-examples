@@ -1,5 +1,7 @@
 package com.chiarato.beam.examples.utils;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
@@ -60,6 +62,7 @@ public class Input {
         events = input.apply("Read Messages from Pubsub",
           PubsubIO
             .readStrings()
+            .withIdAttribute("event_uuid")
             .fromTopic(this.topicName));
       }
 
@@ -71,7 +74,10 @@ public class Input {
         .advanceWatermarkTo(baseTime)
         .addElements(
           event("TYPE-01", Duration.ZERO),
-          event("TYPE-02", Duration.standardSeconds(30)))
+          event("TYPE-01", Duration.standardSeconds(30)),
+          event("TYPE-02", Duration.standardSeconds(31)),
+          event("TYPE-02", Duration.standardSeconds(32)),
+          event("TYPE-02", Duration.standardSeconds(50)))
         .advanceProcessingTime(FIVE_MINUTES)
         .addElements(
           event("TYPE-01", Duration.standardMinutes(1)))
@@ -80,15 +86,17 @@ public class Input {
           event("TYPE-01", Duration.standardMinutes(6)),
           event("TYPE-03", Duration.standardMinutes(9)))
         .advanceProcessingTime(TEN_MINUTES.plus(FIVE_MINUTES))
+        .advanceWatermarkTo(baseTime.plus(TEN_MINUTES.plus(FIVE_MINUTES)))
         .addElements(
           event("TYPE-04", Duration.standardMinutes(9)))
         .advanceWatermarkToInfinity();
     }
 
     private TimestampedValue<String> event(String eventType, Duration baseTimeOffset) {
+      int age = ThreadLocalRandom.current().nextInt(30, 40 + 1);
       return TimestampedValue.of(  
-        "{ 'event_type': '" + eventType + "', 'event_timestamp': '" + baseTime.plus(baseTimeOffset).toDateTime().toString() + "' }",
-        baseTime.plus(baseTimeOffset));
+        "{ \"event_type\": \"" + eventType + "\", \"event_timestamp\": \"" + baseTime.plus(baseTimeOffset).toDateTime().toString() + "\", \"payload\": { \"email\": \"chiarato@gmail.com\", \"age\": \"" + age + "\", \"pet\": { \"name\": \"Little Ball\" } } }",
+        Instant.now());
     }
   }
 }
